@@ -23,6 +23,7 @@
 
   <ItemGroup>
     <Compile Include="Parser.fs" />
+    <Compile Include="Combinators.fs" />
   </ItemGroup>
 
   <ItemGroup>
