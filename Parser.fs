@@ -194,6 +194,54 @@ module Primitives =
                 let! line_no = lineNo<'s, 'u>
                 return! abort (msg + " on line " + (string line_no))
             }
-        
+
         type StringParser<'u, 'a> = Parser<string, 'u, 'a>
-    
+
+open Primitives
+open System.IO
+
+type Tokenization =
+    static member Tokenize(stream: 't []) : TokenStream<'t> =
+        new Zipper<'t>(ref stream, 0)
+    static member Tokenize(stream: 't list) : TokenStream<'t> =
+        Tokenization.Tokenize(Array.ofList stream)
+    static member Tokenize(getter: 's -> ('s * 't option), stream: 's) : TokenStream<'t> =
+        let rec tailRec (stream: 's) (ts : 't list) = 
+            let (stream', o) = getter stream
+            match o with
+                | Option.Some(t) -> tailRec stream' (t::ts)
+                | Option.None -> List.rev ts
+        Tokenization.Tokenize(tailRec stream [])
+    static member TokenizeString(s: string) : TokenStream<char> =
+        let arr = s.ToCharArray()
+        new Zipper<char>(ref arr, 0)
+    static member TokenizeFile(sr: StreamReader) : TokenStream<char> =
+        Tokenization.TokenizeString(sr.ReadToEnd())
+    static member TokenizeFile(getToken: StreamReader -> 't option, fs: StreamReader) =
+        Tokenization.Tokenize((fun x -> (x, getToken x)), fs)
+    static member TokenizeFile(getToken: StreamReader -> 't option, fp: string) =
+        using (File.OpenText(fp)) (fun sr -> Tokenization.TokenizeFile(getToken, sr))
+    static member TokenizeFile(fp: string) : TokenStream<char> =
+        using (File.OpenText(fp)) Tokenization.TokenizeFile
+
+module LineInfo =
+
+    type Tokenization =
+        static member TokenizeString(s: string) : TokenStream<char * int> =
+            let getter ((z, i): Zipper<char> * int) : (Zipper<char> * int) * (char * int) option =
+                match Zipper.get z with
+                    | Result.Ok(c) ->
+                        let i' = if c = '\n' then i else i + 1
+                        z.MoveRight(1)
+                        ((z, i'), Option.Some(c, i))
+                    | Result.Error(_) -> ((z, i), Option.None)
+            let arr = s.ToCharArray()
+            Tokenization.Tokenize(getter, (new Zipper<char>(ref arr, 0), 1))
+        static member TokenizeFile(sr: StreamReader) : TokenStream<char * int> =
+            Tokenization.TokenizeString(sr.ReadToEnd())
+        static member TokenizeFile(getToken: StreamReader -> ('t * int) option, fs: StreamReader) =
+            Tokenization.Tokenize((fun x -> (x, getToken x)), fs)
+        static member TokenizeFile(getToken: StreamReader -> ('t * int) option, fp: string) =
+            using (File.OpenText(fp)) (fun sr -> Tokenization.TokenizeFile(getToken, sr))
+        static member TokenizeFile(fp: string) : TokenStream<char * int> =
+            using (File.OpenText(fp)) Tokenization.TokenizeFile
