@@ -12,7 +12,7 @@ module Primitives =
         State.get >>= fun (_, u, _) -> Monad.inject u
     let inline modify (f: 'U -> 'U) : Parser<'T, 'U, unit> =
         State.modify (fun (s, u, a) -> (s, f u, a))
-        >>= (State.inject << Result.Ok)
+        >>= Monad.inject
     let set (u: 'U) : Parser<'T, 'U, unit> =
         modify (konst u)
 
