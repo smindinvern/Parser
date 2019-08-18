@@ -170,10 +170,12 @@ module Primitives =
     /// <param name="s">The token stream to run it on.</param>
     let runParser (m: Parser<'s, 'u, 'a>) (s: TokenStream<'s>) (u: 'u) =
         State.runState m (s, u, false)
-        
-    type StringParser<'u, 'a> = Parser<string, 'u, 'a>
     
+    type CharParser<'u, 'a> = Parser<char, 'u, 'a>
+    type StringParser<'u, 'a> = Parser<string, 'u, 'a>
+
     module LineInfo =
+
         type Parser<'s, 'u, 'a> = State.State<TokenStream<'s*int> * 'u * bool, Result<'a, string>>
         let inline lineNo<'T, 'U> : Parser<'T, 'U, int> =
             snd <@> peek
