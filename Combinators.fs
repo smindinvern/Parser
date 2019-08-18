@@ -1,7 +1,11 @@
-module Combinators
+namespace Parser
+
+module Combinators =
 
     open Utils
-    open Parser
+    open Types
+    open Monad
+    open Parser.Primitives
     
     /// <summary>
     /// Parse something, ignore something else.  Useful for eating non-semantic tokens, e.g. commas.
@@ -146,7 +150,7 @@ module Combinators
             }
 
     module LineInfo =
-        open Parser.LineInfo
+        open Parser.Primitives.LineInfo
         
         module StringParser =
             let inline (<+>) (s1: StringParser<'u, 'a>) (s2: StringParser<'u, 'a>) =
