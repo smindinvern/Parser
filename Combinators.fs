@@ -120,7 +120,7 @@ module Combinators =
         sequence <| List.replicate n c
     
     let isEOF<'s, 'u> : Parser<'s, 'u, bool> =
-        (konst false <@> peek) <|> (inject true)
+        (konst false <@> peek1) <|> (inject true)
     
     let inline (<||>) p1 p2 =
         parse {
@@ -142,7 +142,7 @@ module Combinators =
             (+) <@> s1 <*> s2
         let inline (~%) (s: string) =
             parse {
-                let! x = pop
+                let! x = pop1
                 if x = s then
                     return s
                 else
@@ -157,7 +157,7 @@ module Combinators =
                 (+) <@> s1 <*> s2
             let inline (~%) (s: string) =
                 parse {
-                    let! x = pop
+                    let! x = pop1
                     if x = s then
                         return s
                     else
