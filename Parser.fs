@@ -1,4 +1,4 @@
-namespace Parser
+namespace smindinvern.Parser
 
 open Utils
 open Zipper

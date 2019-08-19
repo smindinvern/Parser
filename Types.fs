@@ -1,4 +1,4 @@
-namespace Parser
+namespace smindinvern.Parser
 
 module Types =
     open Zipper
