@@ -116,7 +116,17 @@ module Combinators =
     
     let inline repeat (c: Parser<'s, 'u, 'a>) (n: int) : Parser<'s, 'u, 'a list> =
         sequence <| List.replicate n c
-    
+
+    let rec atMost (c: Parser<'s, 'u, 'a>) (n:int) : Parser<'s, 'u, 'a list> =
+        optional (Utils.cons <@> c <*> (atMost c (n - 1))) []
+        
+    let range (c: Parser<'s, 'u, 'a>) (atLeastN: int) (atMostN: int) : Parser<'s, 'u, 'a list> =
+        parse {
+            let! prefix = repeat c atLeastN
+            let! rest = atMost c (atMostN - atLeastN)
+            return prefix @ rest
+        }
+
     let isEOF<'s, 'u> : Parser<'s, 'u, bool> =
         (konst false <@> peek1) <|> (inject true)
     
