@@ -321,9 +321,19 @@ module Parser
         (konst false <@> peek) <|> (inject true)
 
     let inline (<||>) p1 p2 =
-        (||) <@> p1 <*> p2
+        parse {
+            match! p1 with
+            | true -> return true
+            | false -> return! p2
+        }
     let inline (<&&>) p1 p2 =
-        (&&) <@> p1 <*> p2
+        parse {
+            match! p1 with
+            | true -> return! p2
+            | false -> return false
+        }
+    let inline (<=>) p1 p2 =
+        (=) <@> p1 <*> p2
     
     module StringParser =
         type StringParser<'u, 'a> = Parser<string, 'u, 'a>
