@@ -319,7 +319,7 @@ module Parser
         State.runState m (s, u, false)
     
     let isEOF<'s, 'u> : Parser<'s, 'u, bool> =
-        (konst true <@> peek) <|> (inject false)
+        (konst false <@> peek) <|> (inject true)
 
     let inline (<||>) p1 p2 =
         (||) <@> p1 <*> p2
