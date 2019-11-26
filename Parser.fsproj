@@ -11,15 +11,24 @@
   <PropertyGroup>
     <Description>A simple monadic parser library for F#</Description>
   </PropertyGroup>
-  
+
+  <!-- NuGet metadata properties -->
+  <PropertyGroup>
+    <Authors>Nickolas Lloyd</Authors>
+    <PackageLicenseExpression>BSD-3-Clause</PackageLicenseExpression>
+    <PackageId>smindinvern.Parser</PackageId>
+    <RepositoryUrl>https://github.com/smindinvern/Parser</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/smindinvern/Parser</PackageProjectUrl>
+  </PropertyGroup>
+
   <ItemGroup>
     <Compile Include="Parser.fs" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../State/State.fsproj" />
-    <ProjectReference Include="../Utils/Utils.fsproj" />
-    <ProjectReference Include="../Zipper/Zipper.fsproj" />
+    <PackageReference Include="smindinvern.State" Version="[0.1,1.0)" />
+    <PackageReference Include="smindinvern.Utils" Version="[0.1,1.0)" />
+    <PackageReference Include="smindinvern.Zipper" Version="[0.1,1.0)" />
   </ItemGroup>
 
 </Project>

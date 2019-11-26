@@ -41,8 +41,6 @@
     <SymbolsPackageFormat>snupkg</SymbolsPackageFormat>
     <IncludeSymbols>true</IncludeSymbols>
     <IncludeSource>true</IncludeSource>
-    <RepositoryUrl>https://github.com/smindinvern/fsharp-libs</RepositoryUrl>
-    <PackageProjectUrl>https://github.com/smindinvern/fsharp-libs</PackageProjectUrl>
   </PropertyGroup>
 
 </Project>
