@@ -27,8 +27,7 @@ module Parser
         }
     let inline bind (f: 'a -> Parser<'T, 'U, 'b>) (c: Parser<'T, 'U, 'a>) =
         State.state {
-            let! (r: Result<'a, string>) = c
-            match r with
+            match! c with
             | Result.Error e -> return Result.Error e
             | Result.Ok a -> return! f a
         }
