@@ -5,6 +5,7 @@ open smindinvern.Zipper
 
 open Types
 
+open System
 open smindinvern.Alternative
 open smindinvern.Alternative.Monad
 
@@ -153,30 +154,83 @@ module Primitives =
     type CharParser<'u, 'a> = Parser<char, 'u, 'a>
     type StringParser<'u, 'a> = Parser<string, 'u, 'a>
 
-    module LineInfo =
+    module RangeInfo =
+        open System.Text
+        type Position =
+            {
+                Line: int
+                Column: int
+            }
+            static member inline Create(line, col) =
+                { Line = line; Column = col }
+        type Range =
+            {
+                StartPosition: Position
+                EndPosition: Position
+            }
+            static member inline Create (start, stop) =
+                { StartPosition = start; EndPosition = stop }
+            static member (+) (r1: Range, r2: Range) =
+                let start = min r1.StartPosition r2.StartPosition
+                let stop = max r1.EndPosition r2.EndPosition
+                Range.Create(start, stop)
 
-        type Parser<'s, 'u, 'a> = Types.Parser<'s*int, 'u, 'a>
-        let inline lineNo<'T, 'U> : Parser<'T, 'U, int> =
+        type Token<'T> =
+            {
+                Value: 'T
+                Range: Range
+            }
+            static member inline Create (t: 'T, r: Range) =
+                { Value = t; Range = r }
+            static member (+) (t1: Token<'T>, t2: Token<'T>) =
+                Token.Create([t1.Value; t2.Value], t1.Range + t2.Range)
+            static member (+) (t1: Token<'T>, t2: Token<'T list>) =
+                Token.Create(t1.Value::t2.Value, t1.Range + t2.Range)
+            static member (+) (t1: Token<'T list>, t2: Token<'T>) =
+                Token.Create(t1.Value @ [t2.Value], t1.Range + t2.Range)
+            static member (+) (t1: Token<'T list>, t2: Token<'T list>) =
+                Token.Create(t1.Value @ t2.Value, t1.Range + t2.Range)
+            static member Concat (ts: Token<char list>) =
+                let sb = StringBuilder()
+                let sb = List.fold (fun (sb: StringBuilder) (c: char) -> sb.Append(c)) sb ts.Value
+                Token.Create(sb.ToString(), ts.Range)
+            static member Concat (ts: Token<char> list) =
+                let (values, ranges) = List.unzip <| List.map (fun t -> (t.Value, t.Range)) ts
+                let t = Token.Create(values, List.reduce (+) ranges)
+                Token<_>.Concat(t)
+        type TChar = Token<char>
+        type TString = Token<string>
+
+        type Parser<'s, 'u, 'a> = Types.Parser<'s*Range, 'u, 'a>
+        let inline range<'T, 'U> : Parser<'T, 'U, Range> =
             snd <@> peek1
         // These definitions shadow some of those given above.
+        let inline peekToken<'T, 'U> : Parser<'T, 'U, Token<'T>> =
+            Token.Create <@> peek1
         let inline peek1<'T, 'U> : Parser<'T, 'U, 'T> =
             fst <@> peek1
+        let inline popToken<'T, 'U> : Parser<'T, 'U, Token<'T>> =
+            Token.Create <@> pop1
         let inline pop1<'T, 'U> : Parser<'T, 'U, 'T> =
             fst <@> pop1
         let inline error (message: string) : Parser<'s, 'u, 'a> =
             parse {
-                let! line_no = lineNo<'s, 'u>
-                return! error (message + " on line " + (string line_no))
+                let! range = range<'s, 'u>
+                let s = sprintf "%s at line %i, column %i" message range.StartPosition.Line range.StartPosition.Column
+                return! error s
             }
         let inline abort (msg: string) : Parser<'s, 'u, 'a> =
             parse {
-                let! line_no = lineNo<'s, 'u>
-                return! abort (msg + " on line " + (string line_no))
+                let! range = range<'s, 'u>
+                let s = sprintf "%s at line %i, column %i" msg range.StartPosition.Line range.StartPosition.Column
+                return! abort s
             }
 
+        type CharParser<'u, 'a> = Parser<char, 'u, 'a>
         type StringParser<'u, 'a> = Parser<string, 'u, 'a>
 
 open Primitives
+open RangeInfo
 open System.IO
 
 type Tokenization =
@@ -203,26 +257,33 @@ type Tokenization =
     static member TokenizeFile(fp: string) : TokenStream<char> =
         using (File.OpenText(fp)) Tokenization.TokenizeFile
 
-module LineInfo =
+module RangeInfo =
+    type private _Tokenization = Tokenization
 
     type Tokenization =
-        static member TokenizeString(s: string) : TokenStream<char * int> =
-            let getter ((z, i): Zipper<char> * int) : (Zipper<char> * int) * (char * int) option =
+        static member Tokenize(stream: Token<'t> list) : TokenStream<'t * Range> =
+            _Tokenization.Tokenize(List.map (fun t -> (t.Value, t.Range)) stream)
+        static member TokenizeString(s: string) : TokenStream<char * Range> =
+            let getter (z: Zipper<char>, range: Range) =
                 match Zipper.get z with
                     | Result.Ok(c) ->
-                        let i' = if c = '\n' then i else i + 1
+                        let start' =
+                            if c = '\n' then
+                                Position.Create(range.StartPosition.Line + 1, 1)
+                            else
+                                Position.Create(range.StartPosition.Line, range.StartPosition.Column + 1)
                         z.MoveRight(1)
-                        ((z, i'), Option.Some(c, i))
-                    | Result.Error(_) -> ((z, i), Option.None)
+                        ((z, Range.Create(start', start')), Option.Some(c, range))
+                    | Result.Error(_) -> ((z, range), Option.None)
             let arr = s.ToCharArray()
-            Tokenization.Tokenize(getter, (new Zipper<char>(ref arr, 0), 1))
-        static member TokenizeFile(sr: StreamReader) : TokenStream<char * int> =
+            let zipper = Zipper<char>(ref arr, 0)
+            let startPosition = Position.Create(1, 1)
+            _Tokenization.Tokenize(getter, (zipper, Range.Create(startPosition, startPosition)))
+        static member TokenizeFile(sr: StreamReader) : TokenStream<char * Range> =
             Tokenization.TokenizeString(sr.ReadToEnd())
         static member TokenizeFile(getToken: StreamReader -> ('t * int) option, fs: StreamReader) =
-            Tokenization.Tokenize((fun x -> (x, getToken x)), fs)
+            _Tokenization.Tokenize((fun x -> (x, getToken x)), fs)
         static member TokenizeFile(getToken: StreamReader -> ('t * int) option, fp: string) =
             using (File.OpenText(fp)) (fun sr -> Tokenization.TokenizeFile(getToken, sr))
-        static member TokenizeFile(fp: string) : TokenStream<char * int> =
+        static member TokenizeFile(fp: string) : TokenStream<char * Range> =
             using (File.OpenText(fp)) Tokenization.TokenizeFile
-
-

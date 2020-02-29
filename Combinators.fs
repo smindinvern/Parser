@@ -135,8 +135,8 @@ module Combinators =
                     return! error <| "Expecting \"" + s + "\""
             }
 
-    module LineInfo =
-        open Primitives.LineInfo
+    module RangeInfo =
+        open Primitives.RangeInfo
 
         module StringParser =
             let inline (<+>) (s1: StringParser<'u, 'a>) (s2: StringParser<'u, 'a>) =
@@ -144,8 +144,8 @@ module Combinators =
             let inline (~%) (s: string) =
                 parse {
                     let! x = pop1
-                    if x = s then
-                        return s
+                    if x.Value = s then
+                        return x
                     else
                         return! error <| "Expecting \"" + s + "\""
                 }
