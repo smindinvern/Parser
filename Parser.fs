@@ -32,8 +32,6 @@ module Primitives =
     open Results
     open Monad
 
-    open smindinvern.Utils
-
     /// <summary>
     /// Return the next n tokens in the stream without consuming them.
     ///
@@ -235,7 +233,7 @@ open System.IO
 
 type Tokenization =
     static member Tokenize(stream: 't []) : TokenStream<'t> =
-        new Zipper<'t>(ref stream, 0)
+        Zipper<'t>(ref stream, 0)
     static member Tokenize(stream: 't list) : TokenStream<'t> =
         Tokenization.Tokenize(Array.ofList stream)
     static member Tokenize(getter: 's -> ('s * 't option), stream: 's) : TokenStream<'t> =
@@ -247,7 +245,7 @@ type Tokenization =
         Tokenization.Tokenize(tailRec stream [])
     static member TokenizeString(s: string) : TokenStream<char> =
         let arr = s.ToCharArray()
-        new Zipper<char>(ref arr, 0)
+        Zipper<char>(ref arr, 0)
     static member TokenizeFile(sr: StreamReader) : TokenStream<char> =
         Tokenization.TokenizeString(sr.ReadToEnd())
     static member TokenizeFile(getToken: StreamReader -> 't option, fs: StreamReader) =
